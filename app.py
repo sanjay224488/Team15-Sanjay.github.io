@@ -42,10 +42,6 @@ tokenizer, max_len = load_tokenizer()
 
 # ---------- CAPTION GENERATION (LSTM RAW) ----------
 def lstm_extend(seed_text: str, num_words: int = 8) -> str:
-    """
-    Low-level function: ask LSTM to extend the seed_text.
-    We will still post-process this output later.
-    """
     seed_text = seed_text.strip()
     if not seed_text:
         return ""
@@ -86,7 +82,6 @@ def lstm_extend(seed_text: str, num_words: int = 8) -> str:
 
 # ---------- PROFESSIONAL TEMPLATE CAPTIONS ----------
 def template_caption(topic: str) -> str:
-    """Generate a clean, English meme-style caption using templates."""
     topic = topic.strip()
     if not topic:
         return ""
@@ -97,7 +92,7 @@ def template_caption(topic: str) -> str:
         f"Facing {topic} like a boss 👑",
         f"{topic} but I still survive 💀",
         f"{topic} be like… why me? 😭",
-        f"POV: you’re dealing with {topic} again",
+        f"POV: you're dealing with {topic} again",
         f"{topic} level: legendary ⚡",
         f"Still standing after {topic} 💪",
     ]
@@ -106,12 +101,6 @@ def template_caption(topic: str) -> str:
 
 # ---------- HIGH-LEVEL AI CAPTION FUNCTION ----------
 def generate_caption(seed_text: str, num_words: int = 8) -> str:
-    """
-    High-level AI caption generator:
-    1. Try LSTM to extend the text.
-    2. If LSTM output is not good (too short / weird / non-English),
-       fall back to a professional English template.
-    """
     seed_text = seed_text.strip()
     if not seed_text:
         return ""
@@ -120,25 +109,17 @@ def generate_caption(seed_text: str, num_words: int = 8) -> str:
     if not raw:
         return template_caption(seed_text)
 
-    # Check if everything looks English-ish
     def looks_english(s: str) -> bool:
-        # only ASCII characters
-        if not all(ord(ch) < 128 for ch in s):
-            return False
-        return True
+        return all(ord(ch) < 128 for ch in s)
 
-    # Split for analysis
     seed_words = seed_text.split()
     raw_words = raw.split()
 
-    # Case 1: too short or same as input
     if len(raw_words) <= len(seed_words) or raw.lower() == seed_text.lower():
         return template_caption(seed_text)
 
-    # Only consider extra words added by LSTM
     extra_words = raw_words[len(seed_words):]
 
-    # filter out filler/bad small words
     banned_non_english = {
         "la", "mejor", "de", "el", "ella", "ellos", "ellas",
         "que", "por", "para", "con", "sin", "una", "uno",
@@ -159,11 +140,9 @@ def generate_caption(seed_text: str, num_words: int = 8) -> str:
             continue
         good_extra.append(w)
 
-    # Case 2: LSTM added nothing useful or non-English → template
     if not good_extra or not looks_english(" ".join(raw_words)):
         return template_caption(seed_text)
 
-    # Otherwise: seed + good extra words
     final_words = seed_words + good_extra
     return " ".join(final_words)
 
@@ -180,10 +159,6 @@ def get_template_files():
 
 # ---------- MEME IMAGE CREATION ----------
 def create_meme_image(template_path: Path, caption: str) -> Path:
-    """
-    Draw the caption on the template image and save result into GENERATED_DIR.
-    Ensures all text stays inside the image.
-    """
     img = Image.open(template_path).convert("RGB")
     draw = ImageDraw.Draw(img)
     width, height = img.size
@@ -250,10 +225,6 @@ def create_meme_image(template_path: Path, caption: str) -> Path:
 # ---------- STREAMLIT UI ----------
 def main():
     st.title("🧠 AI Meme Creator")
-    st.write(
-        "Generate memes using AI-generated captions or your own text on any image. "
-        "You can select from existing templates or upload a custom image."
-    )
 
     image_source = st.radio(
         "Select image source:",
@@ -269,16 +240,16 @@ def main():
         if not template_files:
             st.error("No templates found! Please add some images to the 'templates' folder.")
             return
+
         template_names = [f.name for f in template_files]
         template_choice = st.selectbox("Choose a template:", template_names)
         selected_image_path = TEMPLATES_DIR / template_choice
         st.image(str(selected_image_path), caption="Template Preview", use_column_width=True)
+
     else:
         uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
         if uploaded_image is not None:
             st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
-        else:
-            st.info("Please upload an image to continue.")
 
     caption_mode = st.radio(
         "How should the caption be generated?",
@@ -287,8 +258,7 @@ def main():
     )
 
     topic = st.text_input("Enter meme topic / caption:")
-
-    num_words = st.slider("Number of extra words (AI mode only):", 3, 10, 6)
+    num_words = st.slider("Number of extra words:", 3, 10, 6)
 
     if st.button("Generate Meme"):
         if image_source == "Use template image":
@@ -306,17 +276,13 @@ def main():
             base_image_path = tmp_path
 
         if not topic.strip():
-            st.warning("Please enter a topic / caption.")
+            st.warning("Please enter a topic.")
             return
 
         if caption_mode == "Generate using AI (LSTM)":
             caption = generate_caption(topic, num_words=num_words)
         else:
             caption = topic.strip()
-
-        if not caption:
-            st.warning("Caption cannot be empty.")
-            return
 
         meme_path = create_meme_image(base_image_path, caption)
 
@@ -327,8 +293,8 @@ def main():
         st.image(str(meme_path), use_column_width=True)
 
     st.markdown("---")
-    st.caption("Prototype - AI Meme Creator (LSTM + Template-based Professional Captions)")
+    st.caption("Prototype - AI Meme Creator (LSTM + Professional Templates)")
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
