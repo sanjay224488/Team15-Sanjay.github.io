@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.h5
+generated/
+*.dll
+*.so
+*.zip
+*.mp4
+*.png
+*.jpg
